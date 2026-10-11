@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace Hexagonal\Domain;
 
+use Hexagonal\Type\InternalIdInterface;
+
 abstract class AggregateRoot
 {
+    abstract public InternalIdInterface $id { get; }
+
+    /** @var list<DomainEvent> */
     public private(set) array $pendingEvents = [];
 
     public function __construct(
@@ -27,5 +32,26 @@ abstract class AggregateRoot
         $this->pendingEvents = [];
 
         return $events;
+    }
+
+    /** @return list<DomainEvent> */
+    public function pendingEvents(): array
+    {
+        return $this->pendingEvents;
+    }
+
+    /** @param list<DomainEvent> $events */
+    public function acknowledgeEvents(array $events): void
+    {
+        $remaining = [];
+        foreach ($this->pendingEvents as $pending) {
+            $index = array_search($pending, $events, true);
+            if ($index === false) {
+                $remaining[] = $pending;
+            } else {
+                unset($events[$index]);
+            }
+        }
+        $this->pendingEvents = $remaining;
     }
 }

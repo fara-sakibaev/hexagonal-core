@@ -1,0 +1,41 @@
+# DDD and Ports & Adapters: primary-source notes
+
+Sources: [Eric Evans, *Domain-Driven Design Reference* (2015)](https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf), a first-party summary of his 2004 book; [Alistair Cockburn, original *Hexagonal Architecture* article (2005)](https://alistair.cockburn.us/hexagonal-architecture/). Page numbers below are printed PDF page numbers, not viewer indices.
+
+## What “complete” means
+
+Evans defines DDD through focus on the core domain, collaborative model exploration, and a ubiquitous language inside an explicit bounded context (Reference, p. 1). These are design practices and boundaries, not a checklist of PHP base classes. His reference separates model building blocks (pp. 9–18), supple design (pp. 19–27), context mapping (pp. 28–38), and strategic distillation (pp. 39–46). A library can enable tactical patterns; it cannot implement context maps, language, or collaboration for an application.
+
+Cockburn defines the application's **inside/outside** boundary. A port specifies an API for a purposeful conversation; an adapter translates between that API and a technology or external actor. Driving adapters (UI, batch, tests) invoke the application. Driven adapters (database, external services, test substitutes) answer or receive its calls. The application must run without its eventual UI or database (original article, “Intent,” “Nature of the Solution,” “Application Notes”). The hexagon has no prescribed six-port count; Cockburn says even the exact port count is a matter of judgment (“How Many Ports?”).
+
+## Implications for a small PHP core
+
+| Concept | Primary-source rule | Library implication |
+| --- | --- | --- |
+| Entity / value object | Entity identity persists through change; a value object is defined by attributes and should be immutable (Evans, pp. 11–12). | Tiny identity/value contracts or helpers can be useful. Equality and invariants remain concrete domain decisions; no universal `equals()` can know every domain's semantics. |
+| Aggregate | One root controls the aggregate boundary and its invariants; external references go through the root. Consistency and transaction boundaries align with the aggregate (Evans, p. 16). | An optional aggregate-root marker or domain-event recording helper is plausible. A base class cannot enforce the full boundary; examples/tests must show it. |
+| Repository | Collection-like access is for aggregate roots **that need direct access**, hiding storage and query technology (Evans, p. 17). | Define repository ports per aggregate in consumer code. A generic CRUD repository for every entity would contradict the selective, domain-specific contract. |
+| Domain service | Use for domain operations that do not naturally belong to an entity or value object (Evans, p. 14). | Domain-specific interfaces/implementations; a universal service base adds little. Distinguish from application orchestration. |
+| Factory | Introduce when creating an internally consistent aggregate or large value object is complicated or exposes internals (Evans, p. 18). | Optional and domain-specific. Simple constructors need no factory framework. |
+| Domain event | Models a significant past occurrence; included in Evans's 2015 reference as an addition to the 2004 book (pp. 13, preface). | A minimal event marker and recording/release mechanism may help; dispatch, delivery guarantees, and outbox belong to separate application/infrastructure decisions. |
+| Bounded context / context map | A model is valid within a stated boundary; relationships between models need explicit mapping (Evans, pp. 2, 29–38). | Namespace/module conventions and documentation examples matter more than a `BoundedContextInterface`; an anti-corruption layer is specific to two models. |
+| Driving / driven port | Port API is chosen by the conversation's purpose; multiple adapters can implement one port (Cockburn, “Nature of the Solution”). | Consumer-owned use-case interfaces and outgoing dependency interfaces, with adapters outside the core. No universal `PortInterface` or `AdapterInterface` is required. |
+
+## Prioritization test
+
+1. **Core value:** abstractions that preserve domain identity/invariants or make external dependencies replaceable in actual use cases.
+2. **Conditional value:** event recording, domain service/factory contracts, specifications, anti-corruption translators, transaction coordination, depending on a demonstrated use case.
+3. **Avoid as completeness targets:** one interface per pattern, generic CRUD over all entities, prescribed numbers of ports or layers, a central event bus in the domain, and runtime registries for bounded contexts. Neither original source demands these mechanisms.
+
+The strongest acceptance test from Cockburn is one use case driven by a test adapter with in-memory driven adapters, then the same use case driven through another adapter without changing application/domain code (original article, “Structure,” “Sample Code”). For DDD, verify the example's ubiquitous language, aggregate invariants, and boundary-specific repository API against a concrete domain (Evans, pp. 1, 16–17).
+
+## Audit of this package (working tree, 2026-10-11)
+
+1. **First: make the existing port story executable.** `src/Application/Command/CommandHandlerInterface.php`, `Query/QueryHandlerInterface.php`, `Event/*HandlerInterface.php`, `Port/Outbound/RepositoryInterface.php`, and `ReadPortInterface.php` have no methods. They are markers, not protocols for a purposeful conversation. Provide one concrete use-case example with an inbound API and a domain-specific repository API. Add generic method signatures only where the package can state correct input/output types without erasing the domain language. Cockburn's example uses a concrete `RateRepository::getRate(amount)`, not an empty universal repository interface (original article, “Sample Code”).
+2. **Next: model entity identity and aggregate boundaries.** `src/Domain/AggregateRoot.php` only records/releases events. It neither represents entity identity nor expresses invariants, consistency, or repository access through the root. Add a minimal optional entity/identity contract if its semantics can be stated precisely; demonstrate an aggregate whose child entities are changed through root behavior. Avoid claiming a base class can enforce aggregate boundaries by itself (Evans, pp. 11, 16–17).
+3. **Clarify value semantics.** `src/Domain/ValueObject.php` being `readonly` supports immutability, but supplies no equality rule. An optional equality convention or example can show comparison by attributes; concrete value objects must choose their own attributes and validate their invariants (Evans, p. 12).
+4. **Correct the CQRS/API constraints.** `src/Application/Query/Query.php` declares `TResult`, while `Port/Inbound/QueryBusInterface.php::ask()` always returns `DTO`; the generic result cannot describe scalar, collection, or optional answers. `ReadPortInterface` accepts `Command|Query` despite its name. Decide whether the package deliberately supports only DTO results, then align the generic contract and names; otherwise let each use case declare its result. Command/query buses are dispatch conveniences, not a prerequisite in Cockburn's pattern.
+5. **Document optional coordination.** `DomainEventPublisherInterface` and `IntegrationEventPublisherInterface` specify `publish()` but no ordering relative to aggregate persistence. If reliable external publication is a package goal, define a separate application-level transaction/outbox boundary and its failure semantics. Do not imply that an event base class alone guarantees delivery. Domain services, factories, policies/specifications, and anti-corruption translators should be introduced when a concrete domain or integration needs them (Evans, pp. 14, 18, 33–34).
+6. **Document strategic boundaries.** Show a bounded context's namespace/module, vocabulary, and a context map in an example. A global `BoundedContextInterface` cannot supply these design decisions (Evans, pp. 1–5, 29–38).
+
+This audit treats the currently staged/uncommitted `PolicyInterface` and ID types as existing work. Their marker nature does not, by itself, express a domain policy or identity semantics.

@@ -1,13 +1,28 @@
 {
-    "name": "fara-sakibaev/hexagonal-core",
-    "description": "Contracts for hexagonal architecture",
-    "type": "library",
-    "require": {
-        "php": "^8.5"
-    },
-    "autoload": {
-        "psr-4": {
-            "Hexagonal\\": "src/"
-        }
+  "name": "fara-sakibaev/hexagonal-core",
+  "description": "Contracts for hexagonal architecture",
+  "type": "library",
+  "require": {
+    "php": "^8.5",
+    "symfony/uid": "^8.1",
+    "ext-simplexml": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Hexagonal\\": "src/"
     }
+  },
+  "bin": [
+    "bin/hexagonal-setup"
+  ],
+  "scripts": {
+    "analyse:phpstan": "phpstan analyse --debug --no-progress --level 8 --autoload-file vendor/autoload.php -c phpstan-extension.neon tests/fixtures/valid-contracts.php",
+    "analyse:psalm": "psalm --no-cache --threads=1 -c psalm.xml",
+    "test:outbox": "php -d zend.assertions=1 -d assert.exception=1 tests/outbox.php",
+    "test:setup": "php -d zend.assertions=1 -d assert.exception=1 tests/setup.php"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "^2",
+    "vimeo/psalm": "^6"
+  }
 }

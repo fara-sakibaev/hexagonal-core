@@ -1,0 +1,88 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+$args = array_slice($argv, 1);
+$apply = in_array('--apply', $args, true);
+$dryRun = in_array('--dry-run', $args, true);
+$choice = null;
+$explicit = null;
+foreach ($args as $index => $arg) {
+    if ($arg === '--analyzer') $choice = $args[$index + 1] ?? null;
+    if ($arg === '--config') $explicit = $args[$index + 1] ?? null;
+}
+if ($choice !== null && !in_array($choice, ['phpstan', 'psalm'], true)) {
+    fwrite(STDERR, "Choose --analyzer phpstan|psalm\n");
+    exit(2);
+}
+$root = getcwd();
+$packageRoot = dirname(__DIR__);
+$composer = is_file($root.'/composer.json') ? json_decode(file_get_contents($root.'/composer.json'), true) : [];
+$scripts = implode(' ', array_map(static fn ($value) => is_array($value) ? implode(' ', $value) : (string) $value, $composer['scripts'] ?? []));
+$candidates = [];
+foreach (['phpstan.neon', 'phpstan.neon.dist', 'phpstan.dist.neon', 'psalm.xml', 'psalm.xml.dist'] as $name) {
+    if (is_file($root.'/'.$name)) $candidates[$name] = str_starts_with($name, 'psalm') ? 'psalm' : 'phpstan';
+}
+if (preg_match_all('/(?:^|\s)(?:-c|--configuration)(?:=|\s+)([^\s"\x27]+)/', $scripts, $matches)) {
+    foreach ($matches[1] as $path) {
+        if (is_file($root.'/'.$path)) $candidates[$path] = str_contains($path, 'psalm') || str_ends_with($path, '.xml') ? 'psalm' : 'phpstan';
+    }
+}
+if ($explicit !== null) {
+    $candidates = is_file($root.'/'.$explicit) ? [$explicit => $choice ?? (str_ends_with($explicit, '.xml') ? 'psalm' : 'phpstan')] : [];
+    if ($candidates === []) { fwrite(STDERR, "Config not found: $explicit\n"); exit(2); }
+}
+if ($choice !== null) $candidates = array_filter($candidates, static fn ($analyzer) => $analyzer === $choice);
+if (count($candidates) > 1) {
+    fwrite(STDERR, "Ambiguous configs: ".implode(', ', array_keys($candidates)).". Use --config PATH.\n");
+    exit(2);
+}
+if ($candidates === []) {
+    if ($choice === null) {
+        fwrite(STDOUT, "No active config found. Choose --analyzer phpstan or --analyzer psalm.\n");
+        exit(2);
+    }
+    $path = $choice === 'phpstan' ? 'phpstan.neon' : 'psalm.xml';
+    $before = '';
+} else {
+    $path = array_key_first($candidates);
+    $choice = $candidates[$path];
+    $before = file_get_contents($root.'/'.$path);
+}
+if ($choice === 'phpstan') {
+    $include = $packageRoot.'/phpstan-extension.neon';
+    if ($before === '') {
+        $after = "includes:\n    - $include\n\nparameters:\n    level: 8\n    paths:\n        - src\n";
+    } elseif (str_contains($before, $include)) {
+        $after = $before;
+    } elseif (preg_match('/^includes\s*:\s*$/m', $before)) {
+        $after = preg_replace('/^includes\s*:\s*$/m', "includes:\n    - $include", $before, 1);
+    } else {
+        $after = rtrim($before)."\n\nincludes:\n    - $include\n";
+    }
+} else {
+    $plugin = 'Hexagonal\\StaticAnalysis\\Psalm\\HandlerPlugin';
+    $after = $before === '' ? '<?xml version="1.0"?><psalm errorLevel="7"><projectFiles><directory name="src"/></projectFiles><plugins><pluginClass class="'.$plugin.'"/></plugins></psalm>' : $before;
+    if ($before !== '' && !str_contains($before, $plugin)) {
+        $dom = new DOMDocument();
+        if (!$dom->loadXML($before)) { fwrite(STDERR, "Invalid Psalm XML: $path\n"); exit(2); }
+        $rootNode = $dom->documentElement;
+        $namespace = $rootNode->namespaceURI;
+        $plugins = $rootNode->getElementsByTagName('plugins')->item(0);
+        if ($plugins === null) { $plugins = $dom->createElementNS($namespace, 'plugins'); $rootNode->appendChild($plugins); }
+        $node = $dom->createElementNS($namespace, 'pluginClass');
+        $node->setAttribute('class', $plugin);
+        $plugins->appendChild($node);
+        $dom->formatOutput = true;
+        $after = $dom->saveXML();
+    }
+}
+fwrite(STDOUT, "Analyzer: $choice; config: $path\n");
+if ($after === $before) { fwrite(STDOUT, "Already configured; no changes.\n"); exit(0); }
+fwrite(STDOUT, "Proposed diff:\n");
+foreach (explode("\n", rtrim($before)) as $line) if ($before !== '') fwrite(STDOUT, "- $line\n");
+foreach (explode("\n", rtrim($after)) as $line) fwrite(STDOUT, "+ $line\n");
+if (!$apply || $dryRun) { fwrite(STDOUT, "Preview only. Use --apply to write.\n"); exit(0); }
+file_put_contents($root.'/'.$path, $after);
+fwrite(STDOUT, "Updated $path. Add vendor/bin/$choice to a root Composer script and CI.\n");
