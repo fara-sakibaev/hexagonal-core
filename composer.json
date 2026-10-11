@@ -2,6 +2,7 @@
   "name": "fara-sakibaev/hexagonal-core",
   "description": "Contracts for hexagonal architecture",
   "type": "library",
+  "license": "MIT",
   "require": {
     "php": "^8.5",
     "symfony/uid": "^8.1",
