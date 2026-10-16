@@ -8,6 +8,18 @@ Place a concrete validator where its rule belongs: domain facts in Domain, reque
 
 An empty `ViolationList` is valid. `ViolationCode` holds a stable machine code; `ViolationPath::root()` represents an object-level error. Callers map codes and paths to localized messages. `merge()` preserves rule order.
 
+When a caller must reject invalid input, inject `ValidationGuard<TInput>`. Configure it with the concrete validator's first-class callable and a factory for the caller's exception:
+
+```php
+$guard = new ValidationGuard(
+    $nameValidator->validate(...),
+    static fn (ViolationList $violations): InvalidName => new InvalidName($violations),
+);
+$guard->assertValid($snapshot);
+```
+
+The guard does nothing for an empty list and passes the complete list to the exception factory otherwise. Keep the exception type in the consuming layer. The validator still returns violations for callers that need to display or combine them. Register a named guard in DI for each input and exception mapping.
+
 ## Symfony attributes
 
 Install `fara-sakibaev/hexagonal-symfony-validator` separately. It requires `symfony/validator`; the core package does not. Build Symfony's validator with attribute mapping, then inject it into `Hexagonal\SymfonyValidator\AttributedInputValidator`. This bridge returns core `ViolationList` and preserves Symfony property paths, including nested paths and the empty root path. Symfony codes are retained. A missing code becomes `symfony.constraint.<lowercase dotted fully qualified constraint class>`; an absent constraint becomes `symfony.constraint.unknown`.
