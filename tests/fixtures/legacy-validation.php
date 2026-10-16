@@ -9,20 +9,31 @@ use Hexagonal\Validation\ViolationList;
 
 final class LegacyDto
 {
-    public function validateShape(): bool { return true; }
+    public function validateShape(): bool
+    {
+        return true;
+    }
 }
 
-final readonly class LegacyInput implements ValidationInputInterface {}
+final readonly class LegacyInput implements ValidationInputInterface
+{
+}
 
 /** @implements ValidatorInterface<LegacyInput> */
 final class AllowedValidator implements ValidatorInterface
 {
-    public function validate(LegacyInput $input): ViolationList { return new ViolationList(); }
+    public function validate(LegacyInput $input): ViolationList
+    {
+        return new ViolationList();
+    }
 }
 
 final class AllowedPolicy implements PolicyInterface
 {
-    public function validate(): bool { return true; }
+    public function validate(): bool
+    {
+        return true;
+    }
 }
 
 interface ExternalValidationApi
@@ -32,6 +43,9 @@ interface ExternalValidationApi
 
 final class RequiredExternalOverride implements ExternalValidationApi
 {
-    #[\Override]
-    public function validateExternal(): bool { return true; }
+    #[Override]
+    public function validateExternal(): bool
+    {
+        return true;
+    }
 }

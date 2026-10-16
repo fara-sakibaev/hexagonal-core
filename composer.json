@@ -17,6 +17,8 @@
     "bin/hexagonal-setup"
   ],
   "scripts": {
+    "cs:check": "php-cs-fixer fix --dry-run --diff --sequential",
+    "cs:fix": "php-cs-fixer fix --sequential",
     "analyse:phpstan": "phpstan analyse --debug --no-progress --level 8 --autoload-file vendor/autoload.php -c phpstan-extension.neon src tests/fixtures/valid-contracts.php tests/fixtures/validation-example.php",
     "analyse:psalm": "psalm --no-cache --threads=1 -c psalm.xml",
     "test:outbox": "php -d zend.assertions=1 -d assert.exception=1 tests/outbox.php",
@@ -26,6 +28,7 @@
   },
   "require-dev": {
     "phpstan/phpstan": "^2",
-    "vimeo/psalm": "^6"
+    "vimeo/psalm": "^6",
+    "friendsofphp/php-cs-fixer": "^3.95"
   }
 }

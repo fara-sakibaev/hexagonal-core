@@ -12,9 +12,13 @@ use Hexagonal\Validation\ViolationCode;
 use Hexagonal\Validation\ViolationList;
 use Hexagonal\Validation\ViolationPath;
 
+use function trim;
+
 final readonly class NameSnapshot implements ValidationInputInterface
 {
-    public function __construct(public string $name, public bool $alreadyUsed) {}
+    public function __construct(public string $name, public bool $alreadyUsed)
+    {
+    }
 }
 
 /** @implements RuleInterface<NameSnapshot> */
@@ -22,7 +26,7 @@ final class NameRequiredRule implements RuleInterface
 {
     public function validate(NameSnapshot $input): ViolationList
     {
-        return trim($input->name) === ''
+        return '' === trim($input->name)
             ? new ViolationList(new Violation(new ViolationCode('name.required'), new ViolationPath('name')))
             : new ViolationList();
     }
@@ -42,7 +46,9 @@ final class NameAvailableRule implements RuleInterface
 /** @implements ValidatorInterface<NameSnapshot> */
 final readonly class NameValidator implements ValidatorInterface
 {
-    public function __construct(private NameRequiredRule $required, private NameAvailableRule $available) {}
+    public function __construct(private NameRequiredRule $required, private NameAvailableRule $available)
+    {
+    }
 
     public function validate(NameSnapshot $input): ViolationList
     {
@@ -52,7 +58,9 @@ final readonly class NameValidator implements ValidatorInterface
 
 final readonly class RegisterNamePort
 {
-    public function __construct(private NameValidator $validator) {}
+    public function __construct(private NameValidator $validator)
+    {
+    }
 
     public function check(string $name, bool $alreadyUsed): ViolationList
     {

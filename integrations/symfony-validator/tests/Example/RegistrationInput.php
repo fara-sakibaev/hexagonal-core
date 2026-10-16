@@ -14,10 +14,13 @@ final readonly class RegistrationInput implements ValidationInputInterface
         #[Assert\NotBlank] public string $first,
         public string $second,
         #[Assert\Valid] public AddressInput $address,
-    ) {}
+    ) {
+    }
 }
 
 final readonly class AddressInput
 {
-    public function __construct(#[Assert\NotBlank] public string $city) {}
+    public function __construct(#[Assert\NotBlank] public string $city)
+    {
+    }
 }

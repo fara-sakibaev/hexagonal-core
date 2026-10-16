@@ -11,7 +11,11 @@ final class DifferentNamesValidator extends ConstraintValidator
 {
     public function validate(mixed $value, Constraint $constraint): void
     {
-        if (!$constraint instanceof DifferentNames || !($value instanceof RegistrationInput || $value instanceof TransferInput)) return;
-        if ($value->first === $value->second) $this->context->buildViolation('Names must differ.')->addViolation();
+        if (!$constraint instanceof DifferentNames || !($value instanceof RegistrationInput || $value instanceof TransferInput)) {
+            return;
+        }
+        if ($value->first === $value->second) {
+            $this->context->buildViolation('Names must differ.')->addViolation();
+        }
     }
 }

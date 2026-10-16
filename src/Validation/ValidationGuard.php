@@ -4,23 +4,26 @@ declare(strict_types=1);
 
 namespace Hexagonal\Validation;
 
+use Closure;
+use Throwable;
+
 /** @template TInput of ValidationInputInterface */
 final readonly class ValidationGuard
 {
-    /** @var \Closure(TInput): ViolationList */
-    private \Closure $validate;
+    /** @var Closure(TInput): ViolationList */
+    private Closure $validate;
 
-    /** @var \Closure(ViolationList): \Throwable */
-    private \Closure $exceptionFactory;
+    /** @var Closure(ViolationList): Throwable */
+    private Closure $exceptionFactory;
 
     /**
-     * @param callable(TInput): ViolationList $validate
-     * @param callable(ViolationList): \Throwable $exceptionFactory
+     * @param callable(TInput): ViolationList    $validate
+     * @param callable(ViolationList): Throwable $exceptionFactory
      */
     public function __construct(callable $validate, callable $exceptionFactory)
     {
-        $this->validate = \Closure::fromCallable($validate);
-        $this->exceptionFactory = \Closure::fromCallable($exceptionFactory);
+        $this->validate = $validate(...);
+        $this->exceptionFactory = $exceptionFactory(...);
     }
 
     /** @param TInput $input */

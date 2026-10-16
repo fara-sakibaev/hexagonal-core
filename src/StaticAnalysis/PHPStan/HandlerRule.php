@@ -11,30 +11,41 @@ use Hexagonal\Application\Query\QueryHandlerInterface;
 use Hexagonal\Validation\RuleInterface;
 use Hexagonal\Validation\ValidatorInterface;
 use Hexagonal\Validation\ViolationList;
+use Override;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
+use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\Rule;
+use PHPStan\Rules\RuleErrorBuilder;
+use PHPStan\ShouldNotHappenException;
+use PHPStan\Type\ObjectType;
+
+use function array_map;
+use function count;
 
 /** @implements Rule<Node\Stmt\Class_> */
-final class HandlerRule implements Rule
+final readonly class HandlerRule implements Rule
 {
-    public function __construct(private \PHPStan\Reflection\ReflectionProvider $reflectionProvider)
+    public function __construct(private ReflectionProvider $reflectionProvider)
     {
     }
 
-    #[\Override]
+    #[Override]
     public function getNodeType(): string
     {
         return Node\Stmt\Class_::class;
     }
 
-    #[\Override]
+    /**
+     * @throws ShouldNotHappenException
+     */
+    #[Override]
     public function processNode(Node $node, Scope $scope): array
     {
-        if ($node->name === null || $node->isAbstract()) {
+        if (null === $node->name || $node->isAbstract()) {
             return [];
         }
-        $name = ($scope->getNamespace() !== null ? $scope->getNamespace().'\\' : '').$node->name->toString();
+        $name = (null !== $scope->getNamespace() ? $scope->getNamespace().'\\' : '').$node->name->toString();
         $class = $this->reflectionProvider->getClass($name);
 
         $errors = [];
@@ -47,13 +58,13 @@ final class HandlerRule implements Rule
             RuleInterface::class => ['TInput', true],
         ] as $interface => [$inputTemplate, $hasResult]) {
             $ancestor = $class->getAncestorWithClassName($interface);
-            if ($ancestor === null) {
+            if (null === $ancestor) {
                 continue;
             }
             $templates = $ancestor->getActiveTemplateTypeMap();
             $input = $templates->getType($inputTemplate);
-            $validation = $interface === ValidatorInterface::class || $interface === RuleInterface::class;
-            $result = $validation ? new \PHPStan\Type\ObjectType(ViolationList::class) : ($hasResult ? $templates->getType('TResult') : null);
+            $validation = ValidatorInterface::class === $interface || RuleInterface::class === $interface;
+            $result = $validation ? new ObjectType(ViolationList::class) : ($hasResult ? $templates->getType('TResult') : null);
             $methodName = $validation ? 'validate' : 'handle';
             $label = $class->getName().' implements '.$interface;
             if (!$class->hasMethod($methodName)) {
@@ -67,12 +78,12 @@ final class HandlerRule implements Rule
             }
             $variant = $method->getVariants()[0];
             $parameters = $variant->getParameters();
-            if (count($parameters) !== 1 || $input === null || ($validation
+            if (1 !== count($parameters) || null === $input || ($validation
                 ? !$parameters[0]->getType()->equals($input)
                 : !$parameters[0]->getType()->isSuperTypeOf($input)->yes())) {
                 $errors[] = $label.' '.$methodName.'() must accept its declared '.$inputTemplate.' type.';
             }
-            if ($hasResult && ($result === null || ($validation
+            if ($hasResult && (null === $result || ($validation
                 ? !$variant->getReturnType()->equals($result)
                 : !$result->isSuperTypeOf($variant->getReturnType())->yes()))) {
                 $errors[] = $label.' '.$methodName.'() must return '.($validation ? ViolationList::class : 'its declared TResult type').'.';
@@ -81,6 +92,7 @@ final class HandlerRule implements Rule
                 $errors[] = $label.' handle() must return void.';
             }
         }
-        return array_map(static fn (string $message) => \PHPStan\Rules\RuleErrorBuilder::message($message)->identifier('hexagonal.handler')->build(), $errors);
+
+        return array_map(static fn (string $message) => RuleErrorBuilder::message($message)->identifier('hexagonal.handler')->build(), $errors);
     }
 }

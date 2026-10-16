@@ -6,6 +6,8 @@ namespace Hexagonal\Domain;
 
 use Hexagonal\Type\InternalIdInterface;
 
+use function array_search;
+
 abstract class AggregateRoot
 {
     abstract public InternalIdInterface $id { get; }
@@ -14,8 +16,7 @@ abstract class AggregateRoot
     public private(set) array $pendingEvents = [];
 
     public function __construct(
-    )
-    {
+    ) {
     }
 
     public function recordThat(DomainEvent $event): self
@@ -46,7 +47,7 @@ abstract class AggregateRoot
         $remaining = [];
         foreach ($this->pendingEvents as $pending) {
             $index = array_search($pending, $events, true);
-            if ($index === false) {
+            if (false === $index) {
                 $remaining[] = $pending;
             } else {
                 unset($events[$index]);

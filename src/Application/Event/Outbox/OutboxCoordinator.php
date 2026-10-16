@@ -17,6 +17,7 @@ final readonly class OutboxCoordinator
 
     /**
      * The transaction adapter must cover both the aggregate store and outbox.
+     *
      * @param callable(AggregateRoot): void $persist
      */
     public function persist(AggregateRoot $aggregate, callable $persist): void

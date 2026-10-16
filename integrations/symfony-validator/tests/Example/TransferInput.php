@@ -9,5 +9,7 @@ use Hexagonal\Validation\ValidationInputInterface;
 #[DifferentNames]
 final readonly class TransferInput implements ValidationInputInterface
 {
-    public function __construct(public string $first, public string $second) {}
+    public function __construct(public string $first, public string $second)
+    {
+    }
 }

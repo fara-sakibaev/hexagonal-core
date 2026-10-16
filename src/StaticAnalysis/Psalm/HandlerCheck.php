@@ -11,15 +11,20 @@ use Hexagonal\Application\Query\QueryHandlerInterface;
 use Hexagonal\Validation\RuleInterface;
 use Hexagonal\Validation\ValidatorInterface;
 use Hexagonal\Validation\ViolationList;
+use Override;
 use Psalm\CodeLocation;
 use Psalm\Internal\Type\Comparator\UnionTypeComparator;
 use Psalm\IssueBuffer;
 use Psalm\Plugin\EventHandler\AfterClassLikeAnalysisInterface;
 use Psalm\Plugin\EventHandler\Event\AfterClassLikeAnalysisEvent;
+use Psalm\Type;
+
+use function count;
+use function strtolower;
 
 final class HandlerCheck implements AfterClassLikeAnalysisInterface
 {
-    #[\Override]
+    #[Override]
     public static function afterStatementAnalysis(AfterClassLikeAnalysisEvent $event): ?bool
     {
         $storage = $event->getClasslikeStorage();
@@ -36,32 +41,33 @@ final class HandlerCheck implements AfterClassLikeAnalysisInterface
             RuleInterface::class => ['TInput', true],
         ] as $interface => [$inputName, $hasResult]) {
             $types = $templates[strtolower($interface)] ?? $templates[$interface] ?? null;
-            if ($types === null) {
+            if (null === $types) {
                 continue;
             }
             $input = $types[$inputName] ?? null;
-            $validation = $interface === ValidatorInterface::class || $interface === RuleInterface::class;
-            $result = $validation ? \Psalm\Type::parseString(ViolationList::class) : ($types['TResult'] ?? null);
+            $validation = ValidatorInterface::class === $interface || RuleInterface::class === $interface;
+            $result = $validation ? Type::parseString(ViolationList::class) : ($types['TResult'] ?? null);
             $methodName = $validation ? 'validate' : 'handle';
             $method = $storage->methods[$methodName] ?? null;
             $message = null;
-            if ($method === null || $method->visibility !== 1) {
+            if (null === $method || 1 !== $method->visibility) {
                 $message = 'Must declare public '.$methodName.'() for '.$interface;
-            } elseif (count($method->params) !== 1 || $method->params[0]->type === null || $input === null
+            } elseif (1 !== count($method->params) || null === $method->params[0]->type || null === $input
                 || !UnionTypeComparator::isContainedBy($event->getCodebase(), $input, $method->params[0]->type)
                 || ($validation && !UnionTypeComparator::isContainedBy($event->getCodebase(), $method->params[0]->type, $input))) {
                 $message = $methodName.'() must accept declared '.$inputName.' for '.$interface;
-            } elseif ($hasResult && ($result === null || $method->return_type === null
+            } elseif ($hasResult && (null === $result || null === $method->return_type
                 || !UnionTypeComparator::isContainedBy($event->getCodebase(), $method->return_type, $result)
                 || ($validation && !UnionTypeComparator::isContainedBy($event->getCodebase(), $result, $method->return_type)))) {
                 $message = $methodName.'() must return '.($validation ? ViolationList::class : 'declared TResult').' for '.$interface;
-            } elseif (!$hasResult && ($method->return_type === null || !$method->return_type->isVoid())) {
+            } elseif (!$hasResult && (null === $method->return_type || !$method->return_type->isVoid())) {
                 $message = 'handle() must return void for '.$interface;
             }
-            if ($message !== null) {
+            if (null !== $message) {
                 IssueBuffer::maybeAdd(new HandlerIssue($message, new CodeLocation($event->getStatementsSource(), $event->getStmt())));
             }
         }
+
         return null;
     }
 }

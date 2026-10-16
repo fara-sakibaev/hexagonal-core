@@ -11,7 +11,9 @@ interface QueryBusInterface
 {
     /**
      * @template TResult of DTO
+     *
      * @param Query<TResult> $query
+     *
      * @return TResult
      */
     public function ask(Query $query): DTO;

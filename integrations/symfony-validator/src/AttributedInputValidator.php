@@ -12,9 +12,14 @@ use Hexagonal\Validation\ViolationPath;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
+use function str_replace;
+use function strtolower;
+
 final readonly class AttributedInputValidator
 {
-    public function __construct(private ValidatorInterface $validator) {}
+    public function __construct(private ValidatorInterface $validator)
+    {
+    }
 
     public function validate(ValidationInputInterface $input): ViolationList
     {
@@ -22,13 +27,14 @@ final readonly class AttributedInputValidator
         foreach ($this->validator->validate($input) as $failure) {
             $constraint = $failure->getConstraint();
             $code = $failure->getCode();
-            if ($code === null || $code === '') {
+            if (null === $code || '' === $code) {
                 $code = $constraint instanceof Constraint
                     ? 'symfony.constraint.'.strtolower(str_replace('\\', '.', $constraint::class))
                     : 'symfony.constraint.unknown';
             }
             $violations[] = new Violation(new ViolationCode($code), new ViolationPath($failure->getPropertyPath()));
         }
+
         return new ViolationList(...$violations);
     }
 }

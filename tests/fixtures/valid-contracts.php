@@ -14,39 +14,60 @@ use Hexagonal\Application\Query\Query;
 use Hexagonal\Application\Query\QueryHandlerInterface;
 use Hexagonal\Domain\DomainEvent;
 
-final readonly class ExampleResult extends DTO {}
+final readonly class ExampleResult extends DTO
+{
+}
 /** @extends Query<ExampleResult> */
-final readonly class ExampleQuery extends Query {}
-final readonly class ExampleCommand extends Command {}
-final readonly class ExampleDomainEvent extends DomainEvent {}
-final readonly class ExampleIntegrationEvent extends IntegrationEvent {}
+final readonly class ExampleQuery extends Query
+{
+}
+final readonly class ExampleCommand extends Command
+{
+}
+final readonly class ExampleDomainEvent extends DomainEvent
+{
+}
+final readonly class ExampleIntegrationEvent extends IntegrationEvent
+{
+}
 
 /** @implements CommandHandlerInterface<ExampleCommand> */
 final class ValidCommandHandler implements CommandHandlerInterface
 {
-    public function handle(ExampleCommand $command): void {}
+    public function handle(ExampleCommand $command): void
+    {
+    }
 }
 
 /** @implements QueryHandlerInterface<ExampleResult, ExampleQuery> */
 final class ValidQueryHandler implements QueryHandlerInterface
 {
-    public function handle(ExampleQuery $query): ExampleResult { return new ExampleResult(); }
+    public function handle(ExampleQuery $query): ExampleResult
+    {
+        return new ExampleResult();
+    }
 }
 
 /** @implements DomainEventHandlerInterface<ExampleDomainEvent> */
 final class ValidDomainEventHandler implements DomainEventHandlerInterface
 {
-    public function handle(ExampleDomainEvent $event): void {}
+    public function handle(ExampleDomainEvent $event): void
+    {
+    }
 }
 
 /** @implements IntegrationEventHandlerInterface<ExampleIntegrationEvent> */
 final class ValidIntegrationEventHandler implements IntegrationEventHandlerInterface
 {
-    public function handle(ExampleIntegrationEvent $event): void {}
+    public function handle(ExampleIntegrationEvent $event): void
+    {
+    }
 }
 
 /** @extends ReadPortInterface<ExampleQuery> */
-interface ValidReadPort extends ReadPortInterface {}
+interface ValidReadPort extends ReadPortInterface
+{
+}
 
 function inferredResult(QueryBusInterface $bus): ExampleResult
 {
