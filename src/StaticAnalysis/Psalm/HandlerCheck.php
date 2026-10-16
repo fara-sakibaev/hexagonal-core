@@ -8,6 +8,9 @@ use Hexagonal\Application\Command\CommandHandlerInterface;
 use Hexagonal\Application\Event\DomainEventHandlerInterface;
 use Hexagonal\Application\Event\IntegrationEventHandlerInterface;
 use Hexagonal\Application\Query\QueryHandlerInterface;
+use Hexagonal\Validation\RuleInterface;
+use Hexagonal\Validation\ValidatorInterface;
+use Hexagonal\Validation\ViolationList;
 use Psalm\CodeLocation;
 use Psalm\Internal\Type\Comparator\UnionTypeComparator;
 use Psalm\IssueBuffer;
@@ -29,23 +32,29 @@ final class HandlerCheck implements AfterClassLikeAnalysisInterface
             QueryHandlerInterface::class => ['TQuery', true],
             DomainEventHandlerInterface::class => ['TEvent', false],
             IntegrationEventHandlerInterface::class => ['TEvent', false],
+            ValidatorInterface::class => ['TInput', true],
+            RuleInterface::class => ['TInput', true],
         ] as $interface => [$inputName, $hasResult]) {
             $types = $templates[strtolower($interface)] ?? $templates[$interface] ?? null;
             if ($types === null) {
                 continue;
             }
             $input = $types[$inputName] ?? null;
-            $result = $types['TResult'] ?? null;
-            $method = $storage->methods['handle'] ?? null;
+            $validation = $interface === ValidatorInterface::class || $interface === RuleInterface::class;
+            $result = $validation ? \Psalm\Type::parseString(ViolationList::class) : ($types['TResult'] ?? null);
+            $methodName = $validation ? 'validate' : 'handle';
+            $method = $storage->methods[$methodName] ?? null;
             $message = null;
             if ($method === null || $method->visibility !== 1) {
-                $message = 'Must declare public handle() for '.$interface;
+                $message = 'Must declare public '.$methodName.'() for '.$interface;
             } elseif (count($method->params) !== 1 || $method->params[0]->type === null || $input === null
-                || !UnionTypeComparator::isContainedBy($event->getCodebase(), $input, $method->params[0]->type)) {
-                $message = 'handle() must accept declared '.$inputName.' for '.$interface;
+                || !UnionTypeComparator::isContainedBy($event->getCodebase(), $input, $method->params[0]->type)
+                || ($validation && !UnionTypeComparator::isContainedBy($event->getCodebase(), $method->params[0]->type, $input))) {
+                $message = $methodName.'() must accept declared '.$inputName.' for '.$interface;
             } elseif ($hasResult && ($result === null || $method->return_type === null
-                || !UnionTypeComparator::isContainedBy($event->getCodebase(), $method->return_type, $result))) {
-                $message = 'handle() must return declared TResult for '.$interface;
+                || !UnionTypeComparator::isContainedBy($event->getCodebase(), $method->return_type, $result)
+                || ($validation && !UnionTypeComparator::isContainedBy($event->getCodebase(), $result, $method->return_type)))) {
+                $message = $methodName.'() must return '.($validation ? ViolationList::class : 'declared TResult').' for '.$interface;
             } elseif (!$hasResult && ($method->return_type === null || !$method->return_type->isVoid())) {
                 $message = 'handle() must return void for '.$interface;
             }

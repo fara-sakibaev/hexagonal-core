@@ -11,6 +11,7 @@
     <projectFiles>
         <directory name="src" />
         <file name="tests/fixtures/valid-contracts.php" />
+        <file name="tests/fixtures/validation-example.php" />
         <ignoreFiles>
             <directory name="vendor" />
         </ignoreFiles>
