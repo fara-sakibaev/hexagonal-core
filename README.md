@@ -1,6 +1,6 @@
 # Hexagonal Core
 
-PHP 8.5 contracts for application and domain layers.
+PHP 8.5 abstractions for hexagonal architecture and domain-driven design (DDD), including application and domain contracts such as entities, value objects, aggregates, and domain events.
 
 ## Analyzer integration
 

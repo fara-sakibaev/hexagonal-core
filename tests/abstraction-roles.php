@@ -25,6 +25,7 @@ use Hexagonal\Application\Query\Query;
 use Hexagonal\Application\Query\QueryHandlerInterface;
 use Hexagonal\Domain\AggregateRoot;
 use Hexagonal\Domain\DomainEvent;
+use Hexagonal\Domain\Entity;
 use Hexagonal\Domain\PolicyInterface;
 use Hexagonal\Domain\ValueObject;
 use Hexagonal\Enum\AdapterConfigParameterInterface;
@@ -79,6 +80,7 @@ $roles = [
     [QueryHandlerInterface::class, ApplicationAbstractionRole::QueryHandler],
     [AggregateRoot::class, DomainAbstractionRole::AggregateRoot],
     [DomainEvent::class, DomainAbstractionRole::DomainEvent],
+    [Entity::class, DomainAbstractionRole::Entity],
     [PolicyInterface::class, DomainAbstractionRole::Policy],
     [ValueObject::class, DomainAbstractionRole::ValueObject],
     [DomainEnumInterface::class, EnumAbstractionRole::DomainEnum],
@@ -109,6 +111,7 @@ foreach ($roles as [$class, $role]) {
     }
     assert($role === $mapper->resolve($class, $ancestors)->role(), $class);
 }
+assert(DomainAbstractionRole::Entity === $mapper->resolve('Consumer\\EntityChild', [Entity::class])->role());
 assert(count($mapper->catalog()) === count($roles) - 2);
 
 // Source-only names must never trigger autoload.

@@ -1,6 +1,6 @@
 {
   "name": "fara-sakibaev/hexagonal-core",
-  "description": "Contracts for hexagonal architecture",
+  "description": "Hexagonal architecture and domain-driven design abstractions for PHP",
   "type": "library",
   "license": "MIT",
   "require": {

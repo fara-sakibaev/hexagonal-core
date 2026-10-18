@@ -10,6 +10,7 @@ use Hexagonal\StaticAnalysis\AbstractionRole\RoleMapper;
 use function array_map;
 use function explode;
 use function implode;
+use function in_array;
 use function realpath;
 use function strlen;
 use function substr;
@@ -28,6 +29,9 @@ final readonly class DeclarationPolicy
         $file = realpath($file) ?: $file;
         $root = $this->scope->context($file);
         if (null === $root || $trait) {
+            return [];
+        }
+        if (in_array('Throwable', $ancestors, true)) {
             return [];
         }
         if (null === $name) {

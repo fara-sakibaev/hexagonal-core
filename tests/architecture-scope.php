@@ -29,6 +29,7 @@ assert('hexagonal.undeclaredContext' === $discovery->diagnostics($scope, [$file]
 
 $policy = new DeclarationPolicy($scope);
 assert([] === $policy->check($file, 3, 'Amount', [ValueObject::class]));
+assert([] === $policy->check($file, 3, 'DomainFailure', ['Throwable']));
 assert('hexagonal.unknownRole' === $policy->check($file, 3, 'Unknown')[0]->identifier);
 assert('hexagonal.incompatibleLayer' === $policy->check($file, 3, 'Command', [Command::class])[0]->identifier);
 assert([] === $policy->check($base.'/src/App/Infrastructure/Helper.php', 1, 'Helper'));
