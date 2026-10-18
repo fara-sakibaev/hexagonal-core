@@ -29,3 +29,5 @@ final class FindUserHandler implements QueryHandlerInterface {
 Aggregates expose a readable `InternalIdInterface` property; concrete aggregates may use a narrower ID type. Keep identity stable for the aggregate lifetime. A get-only property contract alone cannot enforce immutability of its backing storage.
 
 `OutboxCoordinator` takes a transaction adapter, outbox adapter and ID factory. Its transaction must cover aggregate persistence and outbox append on the same atomic resource. It reads pending domain events, commits aggregate plus records, then acknowledges events. On rollback events remain pending. `OutboxRelay` publishes records and marks them delivered afterward. A crash between those steps can redeliver the same ID; consumers must deduplicate by `OutboxRecord::eventId`. The package supplies no SQL schema or broker adapter. Adoption is optional.
+
+See [consumer architecture analysis](docs/architecture-analysis.md) for context discovery, role checks and explicit test exemptions.

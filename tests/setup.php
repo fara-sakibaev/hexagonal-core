@@ -43,3 +43,28 @@ assert(0 === $code);
 assert(!str_contains(file_get_contents($base.'/psalm/psalm.xml'), 'LegacyValidationPlugin'));
 [$code, $output] = runSetup($binary, $base.'/psalm', '--apply');
 assert(0 === $code && str_contains($output, 'no changes'));
+
+foreach (['phpstan' => 'phpstan.neon', 'psalm' => 'psalm.xml'] as $analyzer => $configuration) {
+    $directory = $base.'/architecture-'.$analyzer;
+    mkdir($directory.'/packages/Orders/src/Domain', 0777, true);
+    mkdir($directory.'/tests');
+    file_put_contents($directory.'/hexagonal.json', json_encode(['search_paths' => ['packages'], 'context_roots' => ['packages/Orders/src'], 'test_paths' => ['tests']]));
+    [$code, $preview] = runSetup($binary, $directory, '--analyzer '.$analyzer.' --architecture hexagonal.json --dry-run');
+    assert(0 === $code && str_contains($preview, 'Context candidate (declared)'), $preview);
+    assert(!file_exists($directory.'/'.$configuration));
+    [$code, $output] = runSetup($binary, $directory, '--analyzer '.$analyzer.' --architecture hexagonal.json --apply');
+    assert(0 === $code, $output);
+    $first = file_get_contents($directory.'/'.$configuration);
+    assert(str_contains($first, 'hexagonal.json') && str_contains($first, '/packages'));
+    assert(!str_contains($first, 'name="src"') && !str_contains($first, '- src'));
+    [$code, $output] = runSetup($binary, $directory, '--architecture hexagonal.json --apply');
+    assert(0 === $code && str_contains($output, 'Already configured'), $output);
+    assert($first === file_get_contents($directory.'/'.$configuration));
+    mkdir($directory.'/packages/New/Infrastructure', 0777, true);
+    [$code, $output] = runSetup($binary, $directory, '--architecture hexagonal.json');
+    assert(0 === $code && str_contains($output, 'Context candidate (undeclared)'), $output);
+    file_put_contents($directory.'/hexagonal.json', '{');
+    [$code, $output] = runSetup($binary, $directory, '--architecture hexagonal.json --apply');
+    assert(2 === $code && str_contains($output, 'hexagonal.invalidScope'), $output);
+    assert($first === file_get_contents($directory.'/'.$configuration));
+}

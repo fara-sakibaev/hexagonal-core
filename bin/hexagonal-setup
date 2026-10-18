@@ -8,8 +8,10 @@ $apply = in_array('--apply', $args, true);
 $dryRun = in_array('--dry-run', $args, true);
 $choice = null;
 $explicit = null;
+$architecture = null;
 foreach ($args as $index => $arg) {
     if ($arg === '--analyzer') $choice = $args[$index + 1] ?? null;
+    if ($arg === '--architecture') $architecture = $args[$index + 1] ?? null;
     if ($arg === '--config') $explicit = $args[$index + 1] ?? null;
 }
 if ($choice !== null && !in_array($choice, ['phpstan', 'psalm'], true)) {
@@ -18,6 +20,27 @@ if ($choice !== null && !in_array($choice, ['phpstan', 'psalm'], true)) {
 }
 $root = getcwd();
 $packageRoot = dirname(__DIR__);
+$architectureScope = null;
+if ($architecture !== null) {
+    $autoloadCandidates = [$packageRoot.'/vendor/autoload.php', $packageRoot.'/../../autoload.php', $root.'/vendor/autoload.php'];
+    foreach ($autoloadCandidates as $autoload) {
+        if (is_file($autoload)) { require_once $autoload; break; }
+    }
+    $architecture = str_starts_with($architecture, '/') ? $architecture : $root.'/'.$architecture;
+    try {
+        $architectureScope = \Hexagonal\StaticAnalysis\Architecture\ScopeConfiguration::fromFile($architecture);
+    } catch (InvalidArgumentException $exception) {
+        fwrite(STDERR, '[hexagonal.invalidScope] '.$exception->getMessage()."\n");
+        exit(2);
+    }
+    fwrite(STDOUT, "Architecture scope: $architecture\n");
+    foreach ($architectureScope->searchPaths as $directory) fwrite(STDOUT, "Search: $directory\n");
+    foreach ($architectureScope->testPaths as $directory) fwrite(STDOUT, "Tests: $directory\n");
+    foreach ((new \Hexagonal\StaticAnalysis\Architecture\ContextDiscovery())->candidates($architectureScope) as $directory) {
+        $status = in_array($directory, $architectureScope->contextRoots, true) ? 'declared' : 'undeclared';
+        fwrite(STDOUT, "Context candidate ($status): $directory\n");
+    }
+}
 $composer = is_file($root.'/composer.json') ? json_decode(file_get_contents($root.'/composer.json'), true) : [];
 $scripts = implode(' ', array_map(static fn ($value) => is_array($value) ? implode(' ', $value) : (string) $value, $composer['scripts'] ?? []));
 $candidates = [];
@@ -74,6 +97,48 @@ if ($choice === 'phpstan') {
         $node = $dom->createElementNS($namespace, 'pluginClass');
         $node->setAttribute('class', $plugin);
         $plugins->appendChild($node);
+        $dom->formatOutput = true;
+        $after = $dom->saveXML();
+    }
+}
+if ($architectureScope !== null) {
+    if ($choice === 'phpstan') {
+        $setting = '    hexagonalArchitecture: '.json_encode($architecture, JSON_UNESCAPED_SLASHES)."\n";
+        if (preg_match('/^    hexagonalArchitecture:.*$/m', $after)) {
+            $after = preg_replace_callback('/^    hexagonalArchitecture:.*\n?/m', static fn () => $setting, $after, 1);
+        } elseif (preg_match('/^parameters:\s*$/m', $after)) {
+            $after = preg_replace_callback('/^parameters:\s*$/m', static fn () => "parameters:\n".rtrim($setting), $after, 1);
+        } elseif (preg_match('/^parameters:\s*\{\s*\}\s*$/m', $after)) {
+            $after = preg_replace_callback('/^parameters:\s*\{\s*\}\s*$/m', static fn () => "parameters:\n".rtrim($setting), $after, 1);
+        } elseif (!preg_match('/^parameters:/m', $after)) {
+            $after = rtrim($after)."\n\nparameters:\n".$setting;
+        } else {
+            fwrite(STDERR, "Cannot safely edit parameters; add hexagonalArchitecture to the existing configuration manually.\n");
+            exit(2);
+        }
+        if ($before === '') {
+            $paths = array_unique([...$architectureScope->searchPaths, ...$architectureScope->testPaths]);
+            $after = str_replace("        - src\n", implode('', array_map(static fn ($directory) => '        - '.json_encode($directory, JSON_UNESCAPED_SLASHES)."\n", $paths)), $after);
+        }
+    } else {
+        $dom = new DOMDocument();
+        $dom->loadXML($after);
+        $namespace = $dom->documentElement->namespaceURI;
+        foreach ($dom->getElementsByTagName('pluginClass') as $node) {
+            if ($node->getAttribute('class') !== $plugin) continue;
+            $setting = $node->getElementsByTagName('architecture')->item(0);
+            if ($setting === null) { $setting = $dom->createElementNS($namespace, 'architecture'); $node->appendChild($setting); }
+            $setting->setAttribute('path', $architecture);
+        }
+        if ($before === '') {
+            $files = $dom->getElementsByTagName('projectFiles')->item(0);
+            while ($files->firstChild) $files->removeChild($files->firstChild);
+            foreach (array_unique([...$architectureScope->searchPaths, ...$architectureScope->testPaths]) as $directory) {
+                $node = $dom->createElementNS($namespace, 'directory');
+                $node->setAttribute('name', $directory);
+                $files->appendChild($node);
+            }
+        }
         $dom->formatOutput = true;
         $after = $dom->saveXML();
     }

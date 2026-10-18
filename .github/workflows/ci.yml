@@ -46,6 +46,14 @@ jobs:
       - name: Test validation
         run: composer test:validation
 
+      - name: Test abstraction roles
+        run: composer test:roles
+
+      - name: Test architecture scope and analyzer integrations
+        run: |
+          composer test:architecture:scope
+          composer test:architecture:analysis
+
       - name: Test static analysis rules
         run: composer test:analysis
 

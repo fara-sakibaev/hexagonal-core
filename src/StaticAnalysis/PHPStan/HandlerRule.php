@@ -42,10 +42,10 @@ final readonly class HandlerRule implements Rule
     #[Override]
     public function processNode(Node $node, Scope $scope): array
     {
-        if (null === $node->name || $node->isAbstract()) {
+        if (!isset($node->namespacedName) || $node->isAbstract()) {
             return [];
         }
-        $name = (null !== $scope->getNamespace() ? $scope->getNamespace().'\\' : '').$node->name->toString();
+        $name = $node->namespacedName->toString();
         $class = $this->reflectionProvider->getClass($name);
 
         $errors = [];

@@ -1,4 +1,18 @@
+parameters:
+    hexagonalArchitecture: null
+
+parametersSchema:
+    hexagonalArchitecture: schema(string(), nullable())
+
 services:
+    -
+        class: Hexagonal\StaticAnalysis\PHPStan\ArchitectureCollector
+        tags: [phpstan.collector]
+    -
+        class: Hexagonal\StaticAnalysis\PHPStan\ArchitectureRule
+        arguments:
+            configuration: %hexagonalArchitecture%
+        tags: [phpstan.rules.rule]
     -
         class: Hexagonal\StaticAnalysis\PHPStan\HandlerRule
         tags: [phpstan.rules.rule]

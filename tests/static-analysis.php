@@ -31,7 +31,7 @@ foreach (['AllowedValidator::', 'AllowedPolicy::', 'RequiredExternalOverride::']
     assert(!str_contains($output, $name), $output);
 }
 
-$psalm = ['vendor/bin/psalm', '--no-cache', '--threads=1'];
+$psalm = ['vendor/bin/psalm', '--no-cache', '--threads=1', '--output-format=console'];
 [$code, $output] = analyse([...$psalm, '-c', 'psalm.xml']);
 assert(0 === $code, $output);
 [$code, $output] = analyse([...$psalm, '-c', 'psalm-validation-invalid.xml']);

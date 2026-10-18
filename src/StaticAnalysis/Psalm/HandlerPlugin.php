@@ -18,5 +18,10 @@ final class HandlerPlugin implements PluginEntryPointInterface
     {
         class_exists(HandlerCheck::class);
         $registration->registerHooksFromClass(HandlerCheck::class);
+        if (null !== $config && isset($config->architecture)) {
+            class_exists(ArchitectureCheck::class);
+            ArchitectureCheck::$configuration = (string) $config->architecture['path'];
+            $registration->registerHooksFromClass(ArchitectureCheck::class);
+        }
     }
 }
