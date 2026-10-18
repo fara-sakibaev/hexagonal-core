@@ -20,6 +20,10 @@ final class HandlerPlugin implements PluginEntryPointInterface
         $registration->config->safeSetCustomErrorLevel('DeprecatedReadPort', Config::REPORT_ERROR);
         class_exists(ReadPortCheck::class);
         $registration->registerHooksFromClass(ReadPortCheck::class);
+        class_exists(PortMethodCheck::class);
+        $registration->registerHooksFromClass(PortMethodCheck::class);
+        class_exists(GenericPortMethodCheck::class);
+        $registration->registerHooksFromClass(GenericPortMethodCheck::class);
         class_exists(HandlerCheck::class);
         $registration->registerHooksFromClass(HandlerCheck::class);
         if (null !== $config && isset($config->architecture)) {

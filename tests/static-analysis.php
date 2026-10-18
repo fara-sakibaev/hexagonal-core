@@ -17,6 +17,10 @@ function analyse(array $command): array
 $phpstan = ['vendor/bin/phpstan', 'analyse', '--debug', '--no-progress', '--level', '8', '--autoload-file', 'vendor/autoload.php'];
 [$code, $output] = analyse([...$phpstan, '-c', 'phpstan-extension.neon', 'src', 'tests/fixtures/valid-contracts.php', 'tests/fixtures/validation-example.php']);
 assert(0 === $code, $output);
+[$code, $output] = analyse([...$phpstan, '-c', 'phpstan-extension.neon', 'tests/fixtures/port-methods.php']);
+assert(0 !== $code && str_contains($output, 'InvalidConsumerBus::ask') && str_contains($output, 'Query'), $output);
+assert(str_contains($output, 'OrderRepository::import') && str_contains($output, 'hexagonal.portParameter'), $output);
+assert(!str_contains($output, 'ValidConsumerBus::') && !str_contains($output, 'ScalarIndependentQueryBus::') && !str_contains($output, 'UnrelatedContract::'), $output);
 [$code, $output] = analyse([...$phpstan, '-c', 'phpstan-extension.neon', 'tests/fixtures/invalid-validation.php']);
 assert(0 !== $code && 5 === substr_count($output, 'hexagonal.handler'), $output);
 foreach (['MissingValidatorMethod', 'WrongValidatorInput', 'BroadValidatorInput', 'WrongRuleReturn', 'MissingRuleMethod'] as $name) {
@@ -32,6 +36,10 @@ foreach (['AllowedValidator::', 'AllowedPolicy::', 'RequiredExternalOverride::']
 }
 
 $psalm = ['vendor/bin/psalm', '--no-cache', '--threads=1', '--output-format=console'];
+[$code, $output] = analyse([...$psalm, '-c', 'psalm.xml']);
+assert(0 === $code, $output);
+[$code, $output] = analyse([...$psalm, '-c', 'psalm-port-methods-invalid.xml']);
+assert(0 !== $code && str_contains($output, 'InvalidConsumerBus::ask') && str_contains($output, 'OrderRepository::import') && str_contains($output, 'PortMethodIssue'), $output);
 [$code, $output] = analyse([...$psalm, '-c', 'psalm.xml']);
 assert(0 === $code, $output);
 [$code, $output] = analyse([...$psalm, '-c', 'psalm-validation-invalid.xml']);

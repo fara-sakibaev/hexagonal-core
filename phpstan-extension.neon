@@ -18,6 +18,10 @@ services:
         class: Hexagonal\StaticAnalysis\PHPStan\HandlerRule
         tags: [phpstan.rules.rule]
     -
+        class: Hexagonal\StaticAnalysis\PHPStan\PortMethodRule
+        arguments: [@reflectionProvider]
+        tags: [phpstan.rules.rule]
+    -
         class: Hexagonal\StaticAnalysis\PHPStan\ReadPortCollector
         tags: [phpstan.collector]
     errorFormatter.hexagonal:

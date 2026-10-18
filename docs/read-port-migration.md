@@ -4,6 +4,10 @@ ReadPortInterface usage is a static-analysis error and the interface will be rem
 
 Choose the replacement by what the operation returns and who owns its behavior.
 
+## Port method parameters
+
+Public methods on library ports and consumer interfaces that extend them must retain the port's typed application or domain model parameters. Generic consumer contracts use the model supplied through `RepositoryInterface<TAggregate>` or `ReadPortInterface<TInput>`; that model or a subtype is accepted, while array/map fields cannot replace it. Callable ports also retain their declared model types: `QueryBusInterface` methods accept `Query`, `CommandBusInterface` methods accept `Command`, and event publishers accept their event model. Add independent scalar options as optional parameters so inherited signatures remain compatible. Diagnostics identify the offending method and expected model. Restore the generic model parameter and move field mapping to the application or adapter boundary to remediate the error.
+
 ## Aggregate persistence and retrieval
 
 An Application outbound repository contract describes loading and storing domain aggregates. For example, given an existing Order aggregate:
