@@ -31,3 +31,13 @@ Aggregates expose a readable `InternalIdInterface` property; concrete aggregates
 `OutboxCoordinator` takes a transaction adapter, outbox adapter and ID factory. Its transaction must cover aggregate persistence and outbox append on the same atomic resource. It reads pending domain events, commits aggregate plus records, then acknowledges events. On rollback events remain pending. `OutboxRelay` publishes records and marks them delivered afterward. A crash between those steps can redeliver the same ID; consumers must deduplicate by `OutboxRecord::eventId`. The package supplies no SQL schema or broker adapter. Adoption is optional.
 
 See [consumer architecture analysis](docs/architecture-analysis.md) for context discovery, role checks and explicit test exemptions.
+
+## Read-port deprecation
+
+ReadPortInterface remains usable during the migration period and will be removed in the next breaking release. Ordinary analyzer integration detects deprecated references without hexagonal.json, including analyzed tests.
+
+PHPStan displays warnings through the default human formatter. Use vendor/bin/phpstan analyse --error-format=hexagonalJson for a separate JSON warnings array. Explicit formatter choices remain effective; stock --error-format=json omits these warnings.
+
+Psalm uses INFO by default: run vendor/bin/psalm --show-info=true to display locations and messages. Consumer severity settings remain authoritative. Warning-only usage does not fail analysis; genuine errors still do.
+
+See [read-port migration](docs/read-port-migration.md) for aggregate repository and Application DTO query examples. Infrastructure adapters need responsibility and dependency review before migration. The package requires phpstan/phpdoc-parser ^2 so either analyzer can parse PHPDoc types independently.

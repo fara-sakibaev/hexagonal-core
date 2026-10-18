@@ -16,6 +16,8 @@ function runSetup(string $binary, string $cwd, string $args): array
 mkdir($base.'/starter');
 [$code, $preview] = runSetup($binary, $base.'/starter', '--analyzer phpstan --dry-run');
 assert(0 === $code && str_contains($preview, 'Proposed diff'));
+assert(str_contains($preview, '--error-format=hexagonalJson'));
+assert(str_contains($preview, 'stock --error-format=json omits warnings'));
 assert(!file_exists($base.'/starter/phpstan.neon'));
 [$code] = runSetup($binary, $base.'/starter', '--analyzer phpstan --apply');
 assert(0 === $code);
@@ -26,10 +28,13 @@ assert(0 === $code && str_contains($again, 'no changes'));
 assert(file_get_contents($base.'/starter/phpstan.neon') === $first);
 
 mkdir($base.'/custom');
-file_put_contents($base.'/custom/quality.neon', "parameters:\n    level: 8\n");
+file_put_contents($base.'/custom/quality.neon', "parameters:\n    level: 8\n    errorFormat: json\n");
 file_put_contents($base.'/custom/composer.json', json_encode(['scripts' => ['analyse' => 'phpstan analyse -c quality.neon']]));
 [$code, $output] = runSetup($binary, $base.'/custom', '');
 assert(0 === $code && str_contains($output, 'quality.neon'));
+[$code, $output] = runSetup($binary, $base.'/custom', '--apply');
+assert(0 === $code, $output);
+assert(str_contains(file_get_contents($base.'/custom/quality.neon'), 'errorFormat: json'));
 
 mkdir($base.'/ambiguous');
 file_put_contents($base.'/ambiguous/phpstan.neon', 'parameters: {}');
@@ -38,7 +43,8 @@ file_put_contents($base.'/ambiguous/psalm.xml', '<psalm/>');
 assert(2 === $code && str_contains($output, 'Ambiguous'));
 
 mkdir($base.'/psalm');
-[$code] = runSetup($binary, $base.'/psalm', '--analyzer psalm --apply');
+[$code, $output] = runSetup($binary, $base.'/psalm', '--analyzer psalm --apply');
+assert(str_contains($output, '--show-info=true'));
 assert(0 === $code);
 assert(!str_contains(file_get_contents($base.'/psalm/psalm.xml'), 'LegacyValidationPlugin'));
 [$code, $output] = runSetup($binary, $base.'/psalm', '--apply');

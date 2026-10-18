@@ -144,6 +144,12 @@ if ($architectureScope !== null) {
     }
 }
 fwrite(STDOUT, "Analyzer: $choice; config: $path\n");
+if ($choice === 'phpstan') {
+    fwrite(STDOUT, "Read-port warnings: default human output; use --error-format=hexagonalJson for structured warnings. Existing formatter choices are preserved; stock --error-format=json omits warnings.\n");
+} else {
+    fwrite(STDOUT, "Read-port warnings use INFO; use --show-info=true to display them. Existing issue severity choices are preserved.\n");
+}
+
 if ($after === $before) { fwrite(STDOUT, "Already configured; no changes.\n"); exit(0); }
 fwrite(STDOUT, "Proposed diff:\n");
 foreach (explode("\n", rtrim($before)) as $line) if ($before !== '') fwrite(STDOUT, "- $line\n");

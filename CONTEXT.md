@@ -10,6 +10,12 @@ An architectural responsibility assigned to a type in an application using Hexag
 **Context root**:
 The explicitly declared boundary of a consumer application's architectural context, containing its Application, Domain, or Infrastructure layers. A context may contain only some of these layers.
 
+**Repository**:
+An outbound application port for aggregate persistence and retrieval. Its contract concerns aggregates rather than application query DTOs.
+
+**Query handler**:
+An Application responsibility that answers an application query with a DTO. It is distinct from an Infrastructure adapter that supplies data for the query.
+
 **Validation input**:
 A typed object carrying facts to be checked across or within layers. It does not own the checking rules.
 

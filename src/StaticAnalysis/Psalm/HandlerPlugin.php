@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hexagonal\StaticAnalysis\Psalm;
 
 use Override;
+use Psalm\Config;
 use Psalm\Plugin\PluginEntryPointInterface;
 use Psalm\PluginRegistrationSocket;
 use SimpleXMLElement;
@@ -16,6 +17,9 @@ final class HandlerPlugin implements PluginEntryPointInterface
     #[Override]
     public function __invoke(PluginRegistrationSocket $registration, ?SimpleXMLElement $config = null): void
     {
+        $registration->config->safeSetCustomErrorLevel('DeprecatedReadPort', Config::REPORT_INFO);
+        class_exists(ReadPortCheck::class);
+        $registration->registerHooksFromClass(ReadPortCheck::class);
         class_exists(HandlerCheck::class);
         $registration->registerHooksFromClass(HandlerCheck::class);
         if (null !== $config && isset($config->architecture)) {

@@ -6,7 +6,8 @@
   "require": {
     "php": "^8.5",
     "symfony/uid": "^7.4 || ^8.1",
-    "ext-simplexml": "*"
+    "ext-simplexml": "*",
+    "phpstan/phpdoc-parser": "^2"
   },
   "autoload": {
     "psr-4": {
@@ -21,6 +22,10 @@
     "cs:fix": "php-cs-fixer fix --sequential",
     "analyse:phpstan": "phpstan analyse --debug --no-progress --level 8 --autoload-file vendor/autoload.php -c phpstan-extension.neon src tests/fixtures/valid-contracts.php tests/fixtures/validation-example.php",
     "analyse:psalm": "psalm --no-cache --threads=1 -c psalm.xml",
+    "test:read-port": "php -d zend.assertions=1 -d assert.exception=1 tests/read-port-warnings.php",
+    "test:read-port:reporting": "php -d zend.assertions=1 -d assert.exception=1 tests/read-port-reporting.php",
+    "test:read-port:mixed": "php -d zend.assertions=1 -d assert.exception=1 tests/read-port-mixed.php",
+    "test:read-port:cache": "php -d zend.assertions=1 -d assert.exception=1 tests/read-port-cache.php",
     "test:outbox": "php -d zend.assertions=1 -d assert.exception=1 tests/outbox.php",
     "test:setup": "php -d zend.assertions=1 -d assert.exception=1 tests/setup.php",
     "test:validation": "php -d zend.assertions=1 -d assert.exception=1 tests/validation.php",

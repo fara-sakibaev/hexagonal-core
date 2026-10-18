@@ -1,4 +1,5 @@
 parameters:
+    errorFormat: hexagonal
     hexagonalArchitecture: null
 
 parametersSchema:
@@ -16,3 +17,12 @@ services:
     -
         class: Hexagonal\StaticAnalysis\PHPStan\HandlerRule
         tags: [phpstan.rules.rule]
+    -
+        class: Hexagonal\StaticAnalysis\PHPStan\ReadPortCollector
+        tags: [phpstan.collector]
+    errorFormatter.hexagonal:
+        class: Hexagonal\StaticAnalysis\PHPStan\WarningErrorFormatter
+        arguments:
+            delegate: @errorFormatter.table
+    errorFormatter.hexagonalJson:
+        class: Hexagonal\StaticAnalysis\PHPStan\WarningJsonErrorFormatter

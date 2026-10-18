@@ -57,6 +57,13 @@ jobs:
       - name: Test static analysis rules
         run: composer test:analysis
 
+      - name: Test read-port diagnostics and caches
+        run: |
+          composer test:read-port
+          composer test:read-port:cache
+          composer test:read-port:reporting
+          composer test:read-port:mixed
+
       - name: Install Symfony validator integration dependencies
         working-directory: integrations/symfony-validator
         run: composer install --no-interaction --prefer-dist --no-progress
