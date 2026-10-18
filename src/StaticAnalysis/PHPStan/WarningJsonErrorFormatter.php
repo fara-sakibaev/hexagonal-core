@@ -10,7 +10,6 @@ use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
 
-use function array_map;
 use function count;
 use function json_encode;
 use function strip_tags;
@@ -38,16 +37,27 @@ final class WarningJsonErrorFormatter implements ErrorFormatter
             }
             $files[$file]['messages'][] = $message;
         }
+        $warnings = ReadPortWarnings::fromResult($analysisResult);
+        foreach ($warnings as $warning) {
+            $files[$warning->file] ??= ['errors' => 0, 'messages' => []];
+            ++$files[$warning->file]['errors'];
+            $files[$warning->file]['messages'][] = [
+                'message' => '['.ReadPortWarning::IDENTIFIER.'] '.ReadPortWarning::MESSAGE,
+                'line' => $warning->line,
+                'ignorable' => true,
+                'identifier' => ReadPortWarning::IDENTIFIER,
+            ];
+        }
         $output->writeRaw(json_encode([
             'totals' => [
                 'errors' => count($analysisResult->getNotFileSpecificErrors()),
-                'file_errors' => count($analysisResult->getFileSpecificErrors()),
+                'file_errors' => count($analysisResult->getFileSpecificErrors()) + count($warnings),
             ],
             'files' => (object) $files,
             'errors' => $analysisResult->getNotFileSpecificErrors(),
-            'warnings' => array_map(static fn (ReadPortWarning $warning): array => $warning->toArray(), ReadPortWarnings::fromResult($analysisResult)),
+            'warnings' => [],
         ], JSON_THROW_ON_ERROR));
 
-        return $analysisResult->hasErrors() ? 1 : 0;
+        return $analysisResult->hasErrors() || [] !== $warnings ? 1 : 0;
     }
 }

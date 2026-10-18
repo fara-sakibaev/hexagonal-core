@@ -36,8 +36,8 @@ See [consumer architecture analysis](docs/architecture-analysis.md) for context 
 
 ReadPortInterface remains usable during the migration period and will be removed in the next breaking release. Ordinary analyzer integration detects deprecated references without hexagonal.json, including analyzed tests.
 
-PHPStan displays warnings through the default human formatter. Use vendor/bin/phpstan analyse --error-format=hexagonalJson for a separate JSON warnings array. Explicit formatter choices remain effective; stock --error-format=json omits these warnings.
+PHPStan and Psalm report deprecated references as errors by default; analysis exits nonzero and includes source locations. PHPStan JSON output includes ReadPort findings in the standard file messages and error totals.
 
-Psalm uses INFO by default: run vendor/bin/psalm --show-info=true to display locations and messages. Consumer severity settings remain authoritative. Warning-only usage does not fail analysis; genuine errors still do.
+Psalm reports ReadPort findings as errors by default. Existing aliases, inheritance, PHPDoc and native references are covered; unrelated same-name types are excluded.
 
 See [read-port migration](docs/read-port-migration.md) for aggregate repository and Application DTO query examples. Infrastructure adapters need responsibility and dependency review before migration. The package requires phpstan/phpdoc-parser ^2 so either analyzer can parse PHPDoc types independently.

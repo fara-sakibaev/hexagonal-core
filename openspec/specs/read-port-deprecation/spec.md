@@ -2,9 +2,28 @@
 
 ## Purpose
 
-Give consumers actionable, nonfatal diagnostics for deprecated read-port usage before the contract is removed in a later breaking release.
+Give consumers actionable errors for deprecated read-port usage and migration guidance before the contract is removed in a later breaking release.
 
 ## Requirements
+
+### Requirement: Strict ReadPort usage errors
+PHPStan and Psalm integrations SHALL report every detected ReadPortInterface consumer usage as an analysis error with source file, line, and actionable migration guidance. Detection SHALL retain the existing contract matching rules: direct and indirect inheritance, native and PHPDoc types, aliases and compound types; unrelated same-name types SHALL NOT match.
+
+#### Scenario: ReadPort usage alone
+- **WHEN** analyzed code uses ReadPortInterface and has no other findings
+- **THEN** PHPStan and Psalm analysis fail and report the ReadPort diagnostic at the detected location
+
+#### Scenario: Existing detection forms
+- **WHEN** analyzed code references ReadPortInterface through inheritance, native types, PHPDoc, aliases, or compound types
+- **THEN** the corresponding usages remain detected and each diagnostic fails analysis
+
+#### Scenario: Unrelated same-name type
+- **WHEN** analyzed code references an unrelated interface named ReadPortInterface
+- **THEN** no ReadPort diagnostic is emitted
+
+#### Scenario: Mixed findings
+- **WHEN** ReadPort usage appears with independent analyzer errors
+- **THEN** ReadPort diagnostics and independent errors are reported, and analysis fails
 
 ### Requirement: Contract reference detection
 The integrations SHALL detect ReadPortInterface usage in analyzed consumer declarations through direct or indirect extends/implements, parameter/property/return types, and PHPDoc type references. Names SHALL be resolved with namespaces and aliases. Diagnostics SHALL identify the source file and line. Unrelated types with the same short name SHALL NOT match.
@@ -21,12 +40,12 @@ The integrations SHALL detect ReadPortInterface usage in analyzed consumer decla
 - **WHEN** analyzed code references an unrelated interface named ReadPortInterface
 - **THEN** no read-port deprecation diagnostic is produced for that reference
 
-### Requirement: Actionable nonfatal message
-Diagnostics SHALL use the identifier hexagonal.deprecatedReadPort and the message: "ReadPortInterface is deprecated. Consider using RepositoryInterface for aggregate persistence or QueryHandlerInterface for application queries. ReadPortInterface will be removed in the next breaking release; remaining usages will cause analysis errors." Deprecated usage alone SHALL NOT change successful exit status or increment error counts. Independent errors SHALL retain their failure behavior.
+### Requirement: Actionable strict message
+Diagnostics SHALL use the identifier hexagonal.deprecatedReadPort and the message: "ReadPortInterface is deprecated. Consider using RepositoryInterface for aggregate persistence or QueryHandlerInterface for application queries. ReadPortInterface will be removed in the next breaking release; remaining usages will cause analysis errors." Deprecated usage SHALL fail analysis. Independent errors SHALL retain their failure behavior.
 
-#### Scenario: Warning only
+#### Scenario: Deprecated usage only
 - **WHEN** valid deprecated usage is the only finding
-- **THEN** analysis succeeds with a nonfatal diagnostic
+- **THEN** analysis fails with a located diagnostic
 
 #### Scenario: Warning with genuine error
 - **WHEN** deprecated usage accompanies an invalid handler or generic type

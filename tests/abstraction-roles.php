@@ -27,8 +27,13 @@ use Hexagonal\Domain\AggregateRoot;
 use Hexagonal\Domain\DomainEvent;
 use Hexagonal\Domain\PolicyInterface;
 use Hexagonal\Domain\ValueObject;
+use Hexagonal\Enum\AdapterConfigParameterInterface;
+use Hexagonal\Enum\DomainEnumInterface;
+use Hexagonal\Enum\InfrastructureConfigParameterInterface;
+use Hexagonal\Enum\PortConfigParameterInterface;
 use Hexagonal\StaticAnalysis\AbstractionRole\ApplicationAbstractionRole;
 use Hexagonal\StaticAnalysis\AbstractionRole\DomainAbstractionRole;
+use Hexagonal\StaticAnalysis\AbstractionRole\EnumAbstractionRole;
 use Hexagonal\StaticAnalysis\AbstractionRole\Layer;
 use Hexagonal\StaticAnalysis\AbstractionRole\RoleMapper;
 use Hexagonal\StaticAnalysis\AbstractionRole\RoleResolution;
@@ -76,6 +81,10 @@ $roles = [
     [DomainEvent::class, DomainAbstractionRole::DomainEvent],
     [PolicyInterface::class, DomainAbstractionRole::Policy],
     [ValueObject::class, DomainAbstractionRole::ValueObject],
+    [DomainEnumInterface::class, EnumAbstractionRole::DomainEnum],
+    [PortConfigParameterInterface::class, EnumAbstractionRole::PortConfigParameter],
+    [InfrastructureConfigParameterInterface::class, EnumAbstractionRole::InfrastructureConfigParameter],
+    [AdapterConfigParameterInterface::class, EnumAbstractionRole::AdapterConfigParameter],
     [ExternalIdInterface::class, TypeAbstractionRole::ExternalId],
     [ExternalUid::class, TypeAbstractionRole::ExternalId],
     [IdInterface::class, TypeAbstractionRole::Id],
@@ -124,13 +133,15 @@ $conflict = $mapper->resolve('Consumer\\ConflictingId', [InternalIdInterface::cl
 assert(2 === count($conflict->roles));
 assert(!in_array(TypeAbstractionRole::Id, $conflict->roles, true));
 assert(TypeAbstractionRole::Id === $mapper->resolve('Consumer\\Id', [IdInterface::class])->role());
+$adapterConfig = $mapper->resolve('Consumer\\AdapterConfig', [AdapterConfigParameterInterface::class, InfrastructureConfigParameterInterface::class]);
+assert([EnumAbstractionRole::AdapterConfigParameter] === $adapterConfig->roles);
 
 $ports = ['CommandBus', 'QueryBus', 'DomainEventPublisher', 'IntegrationEventPublisher', 'ReadPort', 'Repository', 'EventIdFactory', 'EventPublisher', 'Outbox', 'Transaction'];
 foreach ($mapper->catalog() as $role) {
     $resolution = new RoleResolution([$role]);
-    $application = $role instanceof ApplicationAbstractionRole || $role instanceof TypeAbstractionRole || $role instanceof ValidationAbstractionRole;
-    $domain = $role instanceof DomainAbstractionRole || $role instanceof TypeAbstractionRole;
-    $infrastructure = $role instanceof TypeAbstractionRole || $role instanceof ValidationAbstractionRole || ($role instanceof ApplicationAbstractionRole && in_array($role->name, $ports, true));
+    $application = $role instanceof ApplicationAbstractionRole || $role instanceof TypeAbstractionRole || $role instanceof ValidationAbstractionRole || EnumAbstractionRole::PortConfigParameter === $role;
+    $domain = $role instanceof DomainAbstractionRole || $role instanceof TypeAbstractionRole || EnumAbstractionRole::DomainEnum === $role;
+    $infrastructure = $role instanceof TypeAbstractionRole || $role instanceof ValidationAbstractionRole || EnumAbstractionRole::InfrastructureConfigParameter === $role || EnumAbstractionRole::AdapterConfigParameter === $role || ($role instanceof ApplicationAbstractionRole && in_array($role->name, $ports, true));
     foreach (['Application' => $application, 'Domain' => $domain, 'Infrastructure' => $infrastructure] as $layer => $allowed) {
         $policy = Layer::from($layer);
         assert($allowed === $policy->allows($role), $layer.': '.$role->name);

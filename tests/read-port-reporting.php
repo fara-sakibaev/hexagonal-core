@@ -24,15 +24,15 @@ foreach (['default', 'hidden', 'suppress', 'error'] as $mode) {
     fclose($pipes[1]);
     fclose($pipes[2]);
     $exit = proc_close($process);
-    assert(('error' === $mode ? 2 : 0) === $exit, $stdout.$stderr);
+    assert((in_array($mode, ['default', 'hidden', 'error'], true) ? 2 : 0) === $exit, $stdout.$stderr);
     $issues = json_decode($stdout, true, 512, JSON_THROW_ON_ERROR);
-    if (in_array($mode, ['hidden', 'suppress'], true)) {
+    if ('suppress' === $mode) {
         assert([] === $issues, $stdout);
     } else {
         assert(14 === count($issues), $stdout);
         foreach ($issues as $issue) {
             assert('DeprecatedReadPort' === $issue['type']);
-            assert(('error' === $mode ? 'error' : 'info') === $issue['severity']);
+            assert('error' === $issue['severity']);
         }
     }
     echo 'Psalm '.$mode." reporting passed.\n";

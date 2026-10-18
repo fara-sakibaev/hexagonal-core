@@ -11,23 +11,57 @@ function runMixed(array $command): array
 {
     $process = proc_open($command, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, dirname(__DIR__));
     assert(is_resource($process));
-    $stdout = stream_get_contents($pipes[1]);
-    $stderr = stream_get_contents($pipes[2]);
+    $stdout = '';
+    $stderr = '';
+    foreach ([1, 2] as $stream) {
+        stream_set_blocking($pipes[$stream], false);
+    }
+    while (!feof($pipes[1]) || !feof($pipes[2])) {
+        $read = [];
+        if (!feof($pipes[1])) {
+            $read[] = $pipes[1];
+        }
+        if (!feof($pipes[2])) {
+            $read[] = $pipes[2];
+        }
+        if ([] === $read) {
+            break;
+        }
+        $write = null;
+        $except = null;
+        stream_select($read, $write, $except, 1);
+        foreach ($read as $stream) {
+            $chunk = fread($stream, 8192);
+            if (1 === $stream) {
+                $stdout .= $chunk;
+            } else {
+                $stderr .= $chunk;
+            }
+        }
+    }
     fclose($pipes[1]);
     fclose($pipes[2]);
     $exit = proc_close($process);
     assert(0 !== $exit, $stdout.$stderr);
 
-    return [$exit, json_decode($stdout, true, 512, JSON_THROW_ON_ERROR)];
+    $json = '' !== $stdout ? $stdout : $stderr;
+    $jsonOffset = strpos($json, '{"totals":');
+    if (false !== $jsonOffset) {
+        $json = substr($json, $jsonOffset);
+    }
+    $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+
+    return [$exit, $decoded];
 }
 
 $base = [PHP_BINARY, $root.'/vendor/bin/phpstan', 'analyse', '--no-progress', '--level=8', '--autoload-file='.$root.'/vendor/autoload.php', '-c', $root.'/phpstan-extension.neon', $root.'/tests/fixtures/read-port-invalid.php'];
 [$stockExit, $stock] = runMixed([...$base, '--error-format=json']);
 [$customExit, $custom] = runMixed([...$base, '--error-format=hexagonalJson']);
 assert($stockExit === $customExit);
-assert([15, 16] === array_column($custom['warnings'], 'line'));
-unset($custom['warnings']);
-assert($stock === $custom, json_encode([$stock, $custom]));
+assert(4 === $custom['totals']['file_errors']);
+assert([15, 16] === array_column(array_values(array_filter($custom['files'][$root.'/tests/fixtures/read-port-invalid.php']['messages'], static fn (array $message): bool => 'hexagonal.deprecatedReadPort' === $message['identifier'])), 'line'));
+assert($stock['totals']['errors'] === $custom['totals']['errors']);
+assert($stock['errors'] === $custom['errors']);
 $messages = $stock['files'][$root.'/tests/fixtures/read-port-invalid.php']['messages'];
 assert(in_array('generics.notSubtype', array_column($messages, 'identifier'), true));
 assert(in_array('hexagonal.handler', array_column($messages, 'identifier'), true));
@@ -42,7 +76,7 @@ assert(2 === $exit);
 $warnings = array_values(array_filter($issues, static fn (array $issue): bool => 'DeprecatedReadPort' === $issue['type']));
 assert([15, 16] === array_column($warnings, 'line_from'), json_encode($issues));
 foreach ($warnings as $warning) {
-    assert('info' === $warning['severity']);
+    assert('error' === $warning['severity']);
 }
 $errors = array_values(array_filter($issues, static fn (array $issue): bool => 'error' === $issue['severity']));
 assert(in_array('InvalidTemplateParam', array_column($errors, 'type'), true), json_encode($issues));
@@ -71,17 +105,19 @@ $base = [PHP_BINARY, $root.'/vendor/bin/phpstan', 'analyse', '--no-progress', '-
 [$stockExit, $stock] = runMixed([...$base, '--error-format=json']);
 [$customExit, $custom] = runMixed([...$base, '--error-format=hexagonalJson']);
 assert($stockExit === $customExit);
-assert([3, 4] === array_column($custom['warnings'], 'line'));
-unset($custom['warnings']);
-assert($stock === $custom);
-assert(in_array('hexagonal.incompatibleLayer', array_column($custom['files'][realpath($portFile)]['messages'], 'identifier'), true), json_encode($custom));
+$architectureMessages = array_merge(...array_map(static fn (array $file): array => $file['messages'], array_values($custom['files'])));
+$readPortMessages = array_values(array_filter($architectureMessages, static fn (array $message): bool => 'hexagonal.deprecatedReadPort' === $message['identifier']));
+assert([3, 4] === array_column($readPortMessages, 'line'), json_encode($custom));
+assert($stock['totals']['errors'] === $custom['totals']['errors']);
+assert($stock['errors'] === $custom['errors']);
+assert(in_array('hexagonal.incompatibleLayer', array_column($architectureMessages, 'identifier'), true), json_encode($custom));
 
 file_put_contents($temp.'/psalm.xml', '<?xml version="1.0"?><psalm errorLevel="1" findUnusedCode="false" autoloader="'.$root.'/vendor/autoload.php"><projectFiles><directory name="'.$temp.'/src"/></projectFiles><plugins><pluginClass class="Hexagonal\StaticAnalysis\Psalm\HandlerPlugin"><architecture path="'.$temp.'/hexagonal.json"/></pluginClass></plugins></psalm>');
 [$exit, $issues] = runMixed([PHP_BINARY, $root.'/vendor/bin/psalm', '--no-cache', '--threads=1', '--show-info=true', '--output-format=json', '-c', $temp.'/psalm.xml']);
 $warnings = array_values(array_filter($issues, static fn (array $issue): bool => 'DeprecatedReadPort' === $issue['type']));
 assert([3, 4] === array_column($warnings, 'line_from'), json_encode($issues));
 foreach ($warnings as $warning) {
-    assert('info' === $warning['severity']);
+    assert('error' === $warning['severity']);
 }
 $architectureErrors = array_values(array_filter($issues, static fn (array $issue): bool => 'ArchitectureIssue' === $issue['type']));
 assert(1 === count($architectureErrors), json_encode($issues));

@@ -17,7 +17,7 @@ final class HandlerPlugin implements PluginEntryPointInterface
     #[Override]
     public function __invoke(PluginRegistrationSocket $registration, ?SimpleXMLElement $config = null): void
     {
-        $registration->config->safeSetCustomErrorLevel('DeprecatedReadPort', Config::REPORT_INFO);
+        $registration->config->safeSetCustomErrorLevel('DeprecatedReadPort', Config::REPORT_ERROR);
         class_exists(ReadPortCheck::class);
         $registration->registerHooksFromClass(ReadPortCheck::class);
         class_exists(HandlerCheck::class);

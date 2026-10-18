@@ -6,11 +6,12 @@ namespace Hexagonal\StaticAnalysis\PHPStan;
 
 use Hexagonal\StaticAnalysis\Deprecation\ReadPortWarning;
 use Override;
+use PHPStan\Analyser\Error;
 use PHPStan\Command\AnalysisResult;
 use PHPStan\Command\ErrorFormatter\ErrorFormatter;
 use PHPStan\Command\Output;
 
-use function sprintf;
+use function array_map;
 
 final readonly class WarningErrorFormatter implements ErrorFormatter
 {
@@ -21,11 +22,31 @@ final readonly class WarningErrorFormatter implements ErrorFormatter
     #[Override]
     public function formatErrors(AnalysisResult $analysisResult, Output $output): int
     {
-        $exit = $this->delegate->formatErrors($analysisResult, $output);
-        foreach (ReadPortWarnings::fromResult($analysisResult) as $warning) {
-            $output->writeRaw(sprintf("\nWarning: %s:%d [%s] %s\n", $warning->file, $warning->line, ReadPortWarning::IDENTIFIER, ReadPortWarning::MESSAGE));
+        $errors = array_map(static fn (ReadPortWarning $warning): Error => Error::decode([
+            'message' => '['.ReadPortWarning::IDENTIFIER.'] '.ReadPortWarning::MESSAGE,
+            'file' => $warning->file,
+            'line' => $warning->line,
+            'canBeIgnored' => true,
+            'filePath' => null,
+            'traitFilePath' => null,
+            'tip' => null,
+            'nodeLine' => null,
+            'nodeType' => null,
+            'identifier' => ReadPortWarning::IDENTIFIER,
+            'metadata' => [],
+            'fixedErrorDiffHash' => null,
+            'fixedErrorDiffDiff' => null,
+            'traitContexts' => [],
+        ]), ReadPortWarnings::fromResult($analysisResult));
+        if ([] === $errors) {
+            return $this->delegate->formatErrors($analysisResult, $output);
         }
 
-        return $exit;
+        $result = $analysisResult->withFileSpecificErrors([
+            ...$analysisResult->getFileSpecificErrors(),
+            ...$errors,
+        ]);
+
+        return $this->delegate->formatErrors($result, $output);
     }
 }

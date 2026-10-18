@@ -17,7 +17,7 @@ final readonly class RoleMapper
     /** @return list<AbstractionRoleInterface> */
     public function catalog(): array
     {
-        return [...ApplicationAbstractionRole::cases(), ...DomainAbstractionRole::cases(), ...TypeAbstractionRole::cases(), ...ValidationAbstractionRole::cases()];
+        return [...ApplicationAbstractionRole::cases(), ...DomainAbstractionRole::cases(), ...EnumAbstractionRole::cases(), ...TypeAbstractionRole::cases(), ...ValidationAbstractionRole::cases()];
     }
 
     /**
@@ -31,6 +31,9 @@ final readonly class RoleMapper
         $roles = array_values(array_filter($this->catalog(), static fn (AbstractionRoleInterface $role): bool => isset($names[strtolower($role->contract())])));
         if (in_array(TypeAbstractionRole::InternalId, $roles, true) || in_array(TypeAbstractionRole::ExternalId, $roles, true)) {
             $roles = array_values(array_filter($roles, static fn (AbstractionRoleInterface $role): bool => TypeAbstractionRole::Id !== $role));
+        }
+        if (in_array(EnumAbstractionRole::AdapterConfigParameter, $roles, true)) {
+            $roles = array_values(array_filter($roles, static fn (AbstractionRoleInterface $role): bool => EnumAbstractionRole::InfrastructureConfigParameter !== $role));
         }
 
         return new RoleResolution($roles);

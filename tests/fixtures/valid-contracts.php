@@ -9,10 +9,13 @@ use Hexagonal\Application\Event\DomainEventHandlerInterface;
 use Hexagonal\Application\Event\IntegrationEvent;
 use Hexagonal\Application\Event\IntegrationEventHandlerInterface;
 use Hexagonal\Application\Port\Inbound\QueryBusInterface;
-use Hexagonal\Application\Port\Outbound\ReadPortInterface;
 use Hexagonal\Application\Query\Query;
 use Hexagonal\Application\Query\QueryHandlerInterface;
 use Hexagonal\Domain\DomainEvent;
+use Hexagonal\Enum\AdapterConfigParameterInterface;
+use Hexagonal\Enum\DomainEnumInterface;
+use Hexagonal\Enum\InfrastructureConfigParameterInterface;
+use Hexagonal\Enum\PortConfigParameterInterface;
 
 final readonly class ExampleResult extends DTO
 {
@@ -29,6 +32,33 @@ final readonly class ExampleDomainEvent extends DomainEvent
 }
 final readonly class ExampleIntegrationEvent extends IntegrationEvent
 {
+}
+
+enum ExampleDomainStatus: string implements DomainEnumInterface
+{
+    case Active = 'active';
+}
+
+enum ExamplePortMode implements PortConfigParameterInterface
+{
+    case Sync;
+}
+
+enum ExampleInfrastructureMode implements InfrastructureConfigParameterInterface
+{
+    case Local;
+}
+
+enum ExampleAdapterMode implements AdapterConfigParameterInterface
+{
+    case Fast;
+}
+
+final readonly class ExampleDomainEnumCommand extends Command
+{
+    public function __construct(public ExampleDomainStatus $status)
+    {
+    }
 }
 
 /** @implements CommandHandlerInterface<ExampleCommand> */
@@ -62,11 +92,6 @@ final class ValidIntegrationEventHandler implements IntegrationEventHandlerInter
     public function handle(ExampleIntegrationEvent $event): void
     {
     }
-}
-
-/** @extends ReadPortInterface<ExampleQuery> */
-interface ValidReadPort extends ReadPortInterface
-{
 }
 
 function inferredResult(QueryBusInterface $bus): ExampleResult

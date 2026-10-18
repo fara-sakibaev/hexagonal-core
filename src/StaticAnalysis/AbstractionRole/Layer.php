@@ -20,9 +20,9 @@ enum Layer: string
         }
 
         return match ($this) {
-            self::Application => $role instanceof ApplicationAbstractionRole || $role instanceof ValidationAbstractionRole,
-            self::Domain => $role instanceof DomainAbstractionRole,
-            self::Infrastructure => $role instanceof ValidationAbstractionRole || in_array($role, [
+            self::Application => $role instanceof ApplicationAbstractionRole || $role instanceof ValidationAbstractionRole || EnumAbstractionRole::PortConfigParameter === $role,
+            self::Domain => $role instanceof DomainAbstractionRole || EnumAbstractionRole::DomainEnum === $role,
+            self::Infrastructure => EnumAbstractionRole::InfrastructureConfigParameter === $role || EnumAbstractionRole::AdapterConfigParameter === $role || $role instanceof ValidationAbstractionRole || in_array($role, [
                 ApplicationAbstractionRole::CommandBus,
                 ApplicationAbstractionRole::QueryBus,
                 ApplicationAbstractionRole::DomainEventPublisher,

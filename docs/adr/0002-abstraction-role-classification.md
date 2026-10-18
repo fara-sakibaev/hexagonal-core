@@ -10,7 +10,9 @@ Context root discovery searches configured first-party code areas for Applicatio
 
 An external RoleMapper collects matches across all role families, applies explicit specialization, and resolves the result to a single role or reports unknown or ambiguous classification. Enums remain role catalogs. Analyzer adapters supply inheritance information from PHPStan or Psalm rather than relying on runtime is_a() calls. Rules translate classification results into diagnostics according to the containing layer.
 
-InternalId absorbs the inherited Id role, as does ExternalId. A type implementing only IdInterface has the Id role. Combining InternalId and ExternalId is ambiguous. This specialization is explicit for identifier roles, not a general first-match precedence rule.
+InternalId absorbs the inherited Id role, as does ExternalId. A type implementing only IdInterface has the Id role. Combining InternalId and ExternalId is ambiguous. This specialization is explicit for identifier roles, not a general first-match precedence rule. `AdapterConfigParameterInterface` similarly specializes `InfrastructureConfigParameterInterface`; its parent match is absorbed, while unrelated roles remain ambiguous.
+
+Four enum-only roles are defined by public marker contracts: `DomainEnumInterface` belongs to Domain; `PortConfigParameterInterface` belongs to Application; `InfrastructureConfigParameterInterface` and its adapter specialization belong to Infrastructure. Domain enums may be referenced by Application DTOs, commands, and queries; references do not change declaration classification.
 
 Type roles are allowed in Application, Domain, and Infrastructure. Validation roles are allowed in Application and Infrastructure; Domain uses domain roles and Type, with domain rules expressed through Policy. These restrictions classify declarations; dependency rules are a separate concern.
 
@@ -22,8 +24,8 @@ The declaration compatibility matrix is:
 
 | Layer | Allowed roles | Required number of roles |
 | --- | --- | --- |
-| Application | Application, Type, Validation | Exactly one |
-| Domain | Domain, Type | Exactly one |
-| Infrastructure | Application/Domain ports, Type, Validation | Zero or one |
+| Application | Application, Type, Validation, PortConfigParameter | Exactly one |
+| Domain | Domain, Type, DomainEnum | Exactly one |
+| Infrastructure | Application/Domain ports, Type, Validation, InfrastructureConfigParameter, AdapterConfigParameter | Zero or one |
 
 Infrastructure's allowance for zero roles does not permit a known role from a disallowed layer. Multiple independent roles are always a diagnostic, including in Infrastructure. Only the explicit identifier specialization collapses inherited role matches.
